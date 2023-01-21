@@ -1,0 +1,56 @@
+[ Description ("") ]
+[ FormDesignerId ("6CF27E88-6E3D-42CA-B298-CACCC9C92C03") ]
+[ PredeclaredId ]
+Class Form1
+
+
+Private pSW As ShellWindows
+Private lCookie As Long, lCookiePending As Long
+Public pDisp As Object
+Private pidl As LongPtr, vrpidl As Variant, vre As Variant, vrpidl2 As Variant
+
+Private Sub cmdRegister_Click()
+If (pSW Is Nothing) Then
+    Set pSW = New ShellWindows
+    Set pDisp = ucSW1.Object
+    pSW.RegisterPending CLng(App.ThreadID), Text1.Text, VarPtr(vre), SWC_BROWSER, lCookiePending
+    Debug.Print "lCookiePending=" & lCookiePending
+'    lCookie = lCookiePending
+    pSW.Register pDisp, CLng(Form1.hWnd), SWC_BROWSER, lCookie
+    ucSW1.RegPath = Text1.Text
+    If lCookie Then
+        cmdRegister.Enabled = False
+        Text1.Text = Text1.Text & " REGISTERED, lCookie=" & lCookie & ",pending=" & lCookiePending
+    Else
+        MsgBox "Failed to register path.", vbOKOnly Or vbCritical, "RegisterShellWindow"
+    End If
+End If
+
+End Sub
+
+Private Sub Form_Terminate()
+If lCookie Then pSW.Revoke lCookie
+lCookie = 0
+If lCookiePending Then
+    If lCookiePending <> lCookie Then pSW.Revoke lCookie
+    lCookiePending = 0
+End If
+CoTaskMemFree pidl
+Set pDisp = Nothing
+
+End Sub
+
+Private Sub Form_Unload(Cancel As Integer)
+If lCookie Then pSW.Revoke lCookie
+lCookie = 0
+If lCookiePending Then
+    If lCookiePending <> lCookie Then pSW.Revoke lCookie
+    lCookiePending = 0
+End If
+CoTaskMemFree pidl
+Set pDisp = Nothing
+End Sub
+
+
+
+End Class

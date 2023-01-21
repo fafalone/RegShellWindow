@@ -1,0 +1,714 @@
+[ Description ("") ]
+[ FormDesignerId ("3B9D6F31-557E-4E9F-86EB-640FB49ABE5B") ]
+[ ClassId ("4030F906-0AC4-4A23-BF20-875B6657178B") ]
+Class ucSW
+
+Private mPath As String
+Private mFile As String
+
+Private mISI As tbShellLib.IShellItem
+
+Private Type SAFEARRAY1D    'Represents a safe array. (One Dimensional)
+    cDims      As Integer   'The count of dimensions.
+    fFeatures  As Integer   'Flags used by the SafeArray.
+    cbElements As Long      'The size of an array element.
+    cLocks     As Long      'The number of times the array has been locked without a corresponding unlock.
+    pvData     As LongPtr   'Pointer to the data.
+    cElements  As Long      'The number of elements in the dimension.
+    lLbound    As Long      'The lower bound of the dimension.
+End Type
+
+Implements tbShellLibImpl.IServiceProvider
+Implements tbShellLib.IShellFolderViewDual
+Implements tbShellLib.IWebBrowserApp
+Implements tbShellLibImpl.IShellBrowser
+Implements tbShellLib.IOleWindow
+Implements tbShellLibImpl.IShellView
+Implements tbShellLibImpl.IFolderView
+Implements tbShellLibImpl.IFolderView2
+
+Private Function dbg_GUIDToString(tg As UUID, Optional bBrack As Boolean = True) As String
+'StringFromGUID2 never works, even "working" code from vbaccelerator AND MSDN
+dbg_GUIDToString = Right$("00000000" & Hex$(tg.Data1), 8) & "-" & Right$("0000" & Hex$(tg.Data2), 4) & "-" & Right$("0000" & Hex$(tg.Data3), 4) & _
+"-" & Right$("00" & Hex$(CLng(tg.Data4(0))), 2) & Right$("00" & Hex$(CLng(tg.Data4(1))), 2) & "-" & Right$("00" & Hex$(CLng(tg.Data4(2))), 2) & _
+Right$("00" & Hex$(CLng(tg.Data4(3))), 2) & Right$("00" & Hex$(CLng(tg.Data4(4))), 2) & Right$("00" & Hex$(CLng(tg.Data4(5))), 2) & _
+Right$("00" & Hex$(CLng(tg.Data4(6))), 2) & Right$("00" & Hex$(CLng(tg.Data4(7))), 2)
+If bBrack Then dbg_GUIDToString = "{" & dbg_GUIDToString & "}"
+End Function
+Private Function LPWSTRtoStr(lPtr As LongPtr, Optional ByVal fFree As Boolean = True) As String
+SysReAllocStringW VarPtr(LPWSTRtoStr), lPtr
+If fFree Then
+    Call CoTaskMemFree(lPtr)
+End If
+End Function
+Private Function dbg_svsiflagstr(dw As SVSI_Flags) As String
+Dim sOut As String
+If (dw And SVSI_CHECK) = SVSI_CHECK Then sOut = sOut & "SVSI_CHECK|"
+If (dw And SVSI_CHECK2) = SVSI_CHECK2 Then sOut = sOut & "SVSI_CHECK2|"
+If (dw And SVSI_DESELECT) = SVSI_DESELECT Then sOut = sOut & "SVSI_DESELECT|"
+If (dw And SVSI_DESELECTOTHERS) = SVSI_DESELECTOTHERS Then sOut = sOut & "SVSI_DESELECTOTHERS|"
+If (dw And SVSI_EDIT) = SVSI_EDIT Then sOut = sOut & "SVSI_EDIT|"
+If (dw And SVSI_ENSUREVISIBLE) = SVSI_ENSUREVISIBLE Then sOut = sOut & "SVSI_ENSUREVISIBLE|"
+If (dw And SVSI_FOCUSED) = SVSI_FOCUSED Then sOut = sOut & "SVSI_FOCUSED|"
+If (dw And SVSI_KEYBOARDSELECT) = SVSI_KEYBOARDSELECT Then sOut = sOut & "SVSI_KEYBOARDSELECT|"
+If (dw And SVSI_NOTAKEFOCUS) = SVSI_NOTAKEFOCUS Then sOut = sOut & "SVSI_NOTAKEFOCUS|"
+If (dw And SVSI_POSITIONITEM) = SVSI_POSITIONITEM Then sOut = sOut & "SVSI_POSITIONITEM|"
+If (dw And SVSI_SELECT) = SVSI_SELECT Then sOut = sOut & "SVSI_SELECT|"
+If (dw And SVSI_SELECTIONMARK) = SVSI_SELECTIONMARK Then sOut = sOut & "SVSI_SELECTIONMARK|"
+If (dw And SVSI_TRANSLATEPT) = SVSI_TRANSLATEPT Then sOut = sOut & "SVSI_TRANSLATEPT|"
+dbg_svsiflagstr = sOut
+End Function
+Private Function dbg_svgioflagstr(dw As SVGIO_Flags) As String
+Dim sOut As String
+If (dw And SVGIO_ALLVIEW) = SVGIO_ALLVIEW Then sOut = sOut & "SVGIO_ALLVIEW|"
+If (dw And SVGIO_BACKGROUND) = SVGIO_BACKGROUND Then sOut = sOut & "SVGIO_BACKGROUND|"
+If (dw And SVGIO_CHECKED) = SVGIO_CHECKED Then sOut = sOut & "SVGIO_CHECKED|"
+If (dw And SVGIO_FLAG_VIEWORDER) = SVGIO_FLAG_VIEWORDER Then sOut = sOut & "SVGIO_FLAG_VIEWORDER|"
+If (dw And SVGIO_SELECTION) = SVGIO_FLAG_VIEWORDER Then sOut = sOut & "SVGIO_FLAG_VIEWORDER|"
+If (dw And SVGIO_TYPE_MASK) = SVGIO_TYPE_MASK Then sOut = sOut & "SVGIO_TYPE_MASK|"
+dbg_svgioflagstr = sOut
+End Function
+
+Public Property Let RegPath(szPath As String)
+mPath = szPath
+End Property
+Public Property Let FilePath(szPath As String)
+mFile = szPath
+End Property
+'Begin Implemented Interfaces
+'Note: Windows XP used IShellFolderViewDual. Windows 10 uses IShellView.
+'I don't know when the switch occured; there would be some extra work retrieving the pidl on IShellFolderViewDual.
+
+Private Sub IServiceProvider_QueryService(guidService As UUID, riid As UUID, ppvObject As LongPtr)
+Dim pUnk As IUnknownUnrestricted
+List1.AddItem "Entry: IServiceProvider_QueryService "
+If IsEqualGUID(riid, IID_IShellBrowser) Then
+    List1.AddItem "ISP QueryService IShellBrowser"
+    Set pUnk = Me
+    pUnk.QueryInterface IID_IShellBrowser, ppvObject
+ElseIf IsEqualGUID(riid, IID_IShellView) Then
+    List1.AddItem "ISP QueryService IShellView"
+    Set pUnk = Me
+    pUnk.QueryInterface IID_IShellView, ppvObject
+ElseIf IsEqualGUID(riid, IID_IFolderView) Then
+    List1.AddItem "ISP QueryService IFolderView"
+    Set pUnk = Me
+    pUnk.QueryInterface IID_IFolderView, ppvObject
+ElseIf IsEqualGUID(riid, IID_IFolderView2) Then
+   List1.AddItem "ISP QueryService IFolderView2"
+   Set pUnk = Me
+   pUnk.QueryInterface IID_IFolderView, ppvObject
+ElseIf IsEqualGUID(riid, IID_IOleWindow) Then
+    List1.AddItem "ISP QueryService IOleWindow"
+   Set pUnk = Me
+   pUnk.QueryInterface IID_IOleWindow, ppvObject
+ElseIf IsEqualGUID(riid, IID_IShellFolderViewDual) Then
+    List1.AddItem "ISP QueryService IShellFolderViewDual"
+   Set pUnk = Me
+   pUnk.QueryInterface IID_IShellFolderViewDual, ppvObject
+ElseIf IsEqualGUID(riid, IID_IWebBrowser) Then
+    List1.AddItem "ISP QueryService IWebBrowser"
+   Set pUnk = Me
+   pUnk.QueryInterface IID_IWebBrowser, ppvObject
+ElseIf IsEqualGUID(riid, IID_IWebBrowserApp) Then
+    List1.AddItem "ISP QueryService IWebBrowserApp"
+   Set pUnk = Me
+   pUnk.QueryInterface IID_IWebBrowserApp, ppvObject
+Else
+    List1.AddItem "ISP QS Serv=" & dbg_GUIDToString(guidService)
+    List1.AddItem "ISP QS riid=" & dbg_GUIDToString(riid)
+End If
+Set pUnk = Nothing
+End Sub
+
+Private Function IOleWindow_GetWindow() As LongPtr
+List1.AddItem "Entry: IOleWindow_GetWindow"
+IOleWindow_GetWindow = UserControl.ContainerHwnd
+End Function
+Private Sub IOleWindow_ContextSensitiveHelp(ByVal fEnterMode As Long)
+List1.AddItem "Entry: IOleWindow_ContextSensitiveHelp"
+End Sub
+
+'IShellView
+'First, IOleWindow methods:
+Private Function IShellView_GetWindow() As LongPtr
+List1.AddItem "Entry: IShellView_GetWindow"
+IShellView_GetWindow = Form1.hWnd
+End Function
+Private Sub IShellView_ContextSensitiveHelp(ByVal fEnterMode As Long)
+List1.AddItem "Entry: IShellView_ContextSensitiveHelp"
+End Sub
+'IShellView methods
+Private Sub IShellView_TranslateAccelerator(lpmsg As MSG)
+List1.AddItem "Entry: IShellView_TranslateAccelerator"
+End Sub
+Private Sub IShellView_EnableModelessSV(ByVal fEnable As Long)
+List1.AddItem "Entry: IShellView_EnableModelessSV"
+End Sub
+Private Sub IShellView_UIActivate(ByVal uState As SVUIA_STATUS)
+List1.AddItem "Entry: IShellView_UIActivate"
+End Sub
+Private Sub IShellView_Refresh()
+List1.AddItem "Entry: IShellView_Refresh"
+End Sub
+Private Sub IShellView_CreateViewWindow(ByVal lpPrevView As tbShellLibImpl.IShellView, lpfs As FOLDERSETTINGS, ByVal psb As tbShellLibImpl.IShellBrowser, prcView As RECT, phwnd As LongPtr) Implements tbShellLibImpl.IShellView.CreateViewWindow
+List1.AddItem "Entry: IShellView_CreateViewWindow"
+End Sub
+Private Sub IShellView_DestroyViewWindow()
+List1.AddItem "Entry: IShellView_DestroyViewWindow"
+End Sub
+Private Sub IShellView_GetCurrentInfo(lpfs As FOLDERSETTINGS)
+List1.AddItem "Entry: IShellView_GetCurrentInfo"
+End Sub
+Private Sub IShellView_AddPropertySheetPages(ByVal dwReserved As Long, ByVal lpfn As LongPtr, ByVal lParam As LongPtr)
+List1.AddItem "Entry: IShellView_AddPropertySheetPages"
+End Sub
+Private Sub IShellView_SaveViewState()
+List1.AddItem "Entry: IShellView_SaveViewState"
+End Sub
+Private Sub IShellView_SelectItem(ByVal pidlItem As LongPtr, ByVal uFlags As SVSI_Flags)
+List1.AddItem "Entry: IShellView_SelectItem"
+If pidlItem Then
+    Dim lp As LongPtr, lp2 As LongPtr
+    Dim pItem As IShellItem
+    SHCreateItemFromIDList pidlItem, IID_IShellItem, pItem
+    If (pItem Is Nothing) = False Then
+        pItem.GetDisplayName SIGDN_NORMALDISPLAY, lp
+        List1.AddItem "ISV_SelectItem->" & LPWSTRtoStr(lp) & ",Flags=" & dbg_svsiflagstr(uFlags)
+        pItem.GetDisplayName SIGDN_FILESYSPATH, lp2
+        mFile = LPWSTRtoStr(lp2)
+    Else
+        List1.AddItem "ISV_SelectItem Got pidl, couldn't create IShellItem"
+    End If
+Else
+    List1.AddItem "ISV_SelectItem entered by no pidl"
+End If
+End Sub
+Private Function IShellView_GetItemObject(ByVal uItem As Long, riid As UUID) As LongPtr
+List1.AddItem "Entry: IShellView_GetItemObject"
+End Function
+Private Sub IShellView_TranslateAcceleratorSB(lpMsg As MSG) Implements tbshelllibimpl.IShellView.TranslateAcceleratorSB
+List1.AddItem "Entry: IShellView_TranslateAcceleratorSB"
+End Sub
+
+'IShellBrowser
+'IOleWindow Methods
+Private Function IShellBrowser_GetWindow() As LongPtr
+List1.AddItem "Entry: IShellBrowser_GetWindow"
+IShellBrowser_GetWindow = Form1.hWnd
+End Function
+Private Sub IShellBrowser_ContextSensitiveHelp(ByVal fEnterMode As Long)
+List1.AddItem "Entry: IShellBrowser_ContextSensitiveHelp"
+End Sub
+'IShellBrowser Methods
+Private Sub IShellBrowser_InsertMenusSB(ByVal hmenuShared As Long, ByVal lpMenuWidths As Long)
+List1.AddItem "Entry: IShellBrowser_InsertMenusSB"
+End Sub
+Private Sub IShellBrowser_SetMenuSB(ByVal hmenuShared As LongPtr, ByVal holemenuReserved As LongPtr, ByVal LONGActiveObject As LongPtr)
+List1.AddItem "Entry: IShellBrowser_SetMenuSB"
+End Sub
+Private Sub IShellBrowser_RemoveMenusSB(ByVal hmenuShared As Long)
+List1.AddItem "Entry: IShellBrowser_RemoveMenusSB"
+End Sub
+Private Sub IShellBrowser_SetStatusTextSB(ByVal lpszStatusText As String) Implements tbShellLibImpl.IShellBrowser.SetStatusTextSB
+List1.AddItem "Entry: IShellBrowser_SetStatusTextSB"
+End Sub
+
+Private Sub IShellBrowser_EnableModelessSB(ByVal fEnable As Long)
+List1.AddItem "Entry: IShellBrowser_EnableModelessSB"
+End Sub
+Private Sub IShellBrowser_TranslateAcceleratorSB(lpmsg As MSG, ByVal wID As Integer)
+List1.AddItem "Entry: IShellBrowser_TranslateAcceleratorSB"
+End Sub
+Private Sub IShellBrowser_BrowseObject(ByVal pidl As LongPtr, ByVal wFlags As BO_Flags)
+List1.AddItem "Entry: IShellBrowser_BrowseObject"
+End Sub
+Private Sub IShellBrowser_GetViewStateStream(ByVal grfMode As Long, ppStrm As IStream) Implements tbShellLibImpl.IShellBrowser.GetViewStateStream
+List1.AddItem "Entry: IShellBrowser_GetViewStateStream"
+End Sub
+Private Sub IShellBrowser_GetControlWindow(ByVal id As GCW_IDs, lpHwnd As LongPtr) Implements tbShellLibImpl.IShellBrowser.GetControlWindow
+List1.AddItem "Entry: IShellBrowser_GetControlWindow"
+End Sub
+
+Private Sub IShellBrowser_SendControlMsg(ByVal id As GCW_IDs, ByVal uMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, pret As LongPtr) Implements tbShellLibImpl.IShellBrowser.SendControlMsg
+List1.AddItem "Entry: IShellBrowser_SendControlMsg"
+End Sub
+
+Private Sub IShellBrowser_InsertMenuSB(ByVal hMenuShared As LongPtr, lpMenuWidth As OLEMENUGROUPWIDTHS) Implements tbShellLibImpl.IShellBrowser.InsertMenuSB
+List1.AddItem "Entry: IShellBrowser_InsertMenuSB"
+End Sub
+
+Private Sub IShellBrowser_OnViewWindowActive(ByVal ppshv As IShellView) Implements tbShellLibImpl.IShellBrowser.OnViewWindowActive
+List1.AddItem "Entry: IShellBrowser_OnViewWindowActive"
+End Sub
+
+Private Sub IShellBrowser_QueryActiveShellView(ppshv As IShellView) Implements tbShellLibImpl.IShellBrowser.QueryActiveShellView
+List1.AddItem "Entry: IShellBrowser_QueryActiveShellView"
+Set ppshv = Me
+End Sub
+
+Private Sub IShellBrowser_RemoveWindowSB(ByVal hMenuShared As LongPtr) Implements tbShellLibImpl.IShellBrowser.RemoveWindowSB
+List1.AddItem "Entry: IShellBrowser_RemoveWindowSB"
+End Sub
+
+Private Sub IShellBrowser_SetToolbarItems(ByVal lpButtons As LongPtr, ByVal nButtons As Long, ByVal uFlags As STI_Flags) Implements tbShellLibImpl.IShellBrowser.SetToolbarItems
+List1.AddItem "Entry: IShellBrowser_SetToolbarItems"
+End Sub
+
+'IFolderView
+Private Sub IFolderView_GetCurrentViewMode(pViewMode As Long)
+List1.AddItem "Entry: IFolderView_GetCurrentViewMode"
+End Sub
+Private Sub IFolderView_SetCurrentViewMode(ByVal ViewMode As Long)
+List1.AddItem "Entry: IFolderView_SetCurrentViewMode"
+End Sub
+Private Sub IFolderView_GetFolder(riid As UUID, ppv As LongPtr)
+List1.AddItem "Entry: IFolderView_GetFolder"
+If IsEqualGUID(riid, IID_IShellItem) Then
+    List1.AddItem "IFV GetFolder requested IShellItem"
+    SHCreateItemFromParsingName StrPtr(mPath), Nothing, IID_IShellItem, ppv
+Else
+    List1.AddItem "IFV GetFolder Unsupported request"
+End If
+End Sub
+Private Sub IFolderView_Item(ByVal iItemIndex As Long, ppidl As LongPtr)
+List1.AddItem "Entry: IFolderView_Item"
+End Sub
+Private Sub IFolderView_ItemCount(ByVal uFlags As SVGIO_Flags, pcItems As Long)
+List1.AddItem "Entry: IFolderView_ItemCount, Flags=" & uFlags
+If uFlags = SVGIO_SELECTION Then pcItems = 1
+If uFlags = SVGIO_ALLVIEW Then pcItems = 5
+If uFlags = SVGIO_BACKGROUND Then pcItems = 5
+End Sub
+Private Sub IFolderView_Items(ByVal uFlags As SVGIO_Flags, riid As UUID, ppv As LongPtr)
+List1.AddItem "Entry: IFolderView_Items"
+End Sub
+Private Sub IFolderView_GetSelectionMarkedItem(piItem As Long)
+List1.AddItem "Entry: IFolderView_GetSelectionMarkedItem"
+End Sub
+Private Sub IFolderView_GetFocusedItem(piItem As Long)
+List1.AddItem "Entry: IFolderView_GetFocusedItem"
+End Sub
+Private Sub IFolderView_GetItemPosition(ByVal pidl As LongPtr, ppt As POINT)
+List1.AddItem "Entry: IFolderView_GetItemPosition"
+End Sub
+Private Sub IFolderView_GetSpacing(ppt As POINT)
+List1.AddItem "Entry: IFolderView_GetSpacing"
+End Sub
+Private Sub IFolderView_GetDefaultSpacing(ppt As POINT)
+List1.AddItem "Entry: IFolderView_GetDefaultSpacing"
+End Sub
+Private Sub IFolderView_GetAutoArrange()
+List1.AddItem "Entry: IFolderView_GetAutoArrange"
+End Sub
+Private Sub IFolderView_SelectItem(ByVal iItem As Long, ByVal dwFlags As SVSI_Flags)
+List1.AddItem "Entry: IFolderView_SelectItem"
+End Sub
+Private Sub IFolderView_SelectAndPositionItems(ByVal cidl As Long, apidl As LongPtr, apt As POINT, ByVal dwFlags As SVSI_Flags)
+List1.AddItem "Entry: IFolderView_SelectAndPositionItems"
+End Sub
+
+'IFolderView2
+'IFolderView
+Private Sub IFolderView2_GetCurrentViewMode(pViewMode As Long)
+List1.AddItem "Entry: IFolderView2_GetCurrentViewMode"
+End Sub
+Private Sub IFolderView2_SetCurrentViewMode(ByVal ViewMode As Long)
+List1.AddItem "Entry: IFolderView2_SetCurrentViewMode"
+End Sub
+Private Sub IFolderView2_GetFolder(riid As UUID, ppv As LongPtr)
+List1.AddItem "Entry: IFolderView2_GetFolder"
+If IsEqualGUID(riid, IID_IShellItem) Then
+    List1.AddItem "IFV2 GetFolder requested IShellItem"
+    SHCreateItemFromParsingName StrPtr(mPath), Nothing, IID_IShellItem, ppv
+Else
+    List1.AddItem "IFV2 GetFolder Unsupported request"
+End If
+ End Sub
+Private Sub IFolderView2_Item(ByVal iItemIndex As Long, ppidl As LongPtr)
+List1.AddItem "Entry: IFolderView2_Item"
+End Sub
+Private Sub IFolderView2_ItemCount(ByVal uFlags As SVGIO_Flags, pcItems As Long)
+List1.AddItem "Entry: IFolderView2_ItemCount, Flags=" & uFlags
+If uFlags = SVGIO_SELECTION Then pcItems = 1
+If uFlags = SVGIO_ALLVIEW Then pcItems = 5
+If uFlags = SVGIO_BACKGROUND Then pcItems = 5
+End Sub
+Private Sub IFolderView2_Items(ByVal uFlags As SVGIO_Flags, riid As UUID, ppv As LongPtr)
+List1.AddItem "Entry: IFolderView2_Items"
+End Sub
+Private Sub IFolderView2_GetSelectionMarkedItem(piItem As Long)
+List1.AddItem "Entry: IFolderView2_GetSelectionMarkedItem"
+End Sub
+Private Sub IFolderView2_GetFocusedItem(piItem As Long)
+List1.AddItem "Entry: IFolderView2_GetFocusedItem"
+End Sub
+Private Sub IFolderView2_GetItemPosition(ByVal pidl As LongPtr, ppt As POINT)
+List1.AddItem "Entry: IFolderView2_GetItemPosition"
+End Sub
+Private Sub IFolderView2_GetSpacing(ppt As POINT)
+List1.AddItem "Entry: IFolderView2_GetSpacing"
+End Sub
+Private Sub IFolderView2_GetDefaultSpacing(ppt As POINT)
+List1.AddItem "Entry: IFolderView2_GetDefaultSpacing"
+End Sub
+Private Sub IFolderView2_GetAutoArrange()
+List1.AddItem "Entry: IFolderView2_GetAutoArrange"
+End Sub
+Private Sub IFolderView2_SelectItem(ByVal iItem As Long, ByVal dwFlags As SVSI_Flags)
+List1.AddItem "Entry: IFolderView2_SelectItem"
+End Sub
+Private Sub IFolderView2_SelectAndPositionItems(ByVal cidl As Long, apidl As LongPtr, apt As POINT, ByVal dwFlags As SVSI_Flags)
+List1.AddItem "Entry: IFolderView2_SelectAndPositionItems"
+End Sub
+'IFolderView2 methods
+Private Sub IFolderView2_SetGroupBy(key As PROPERTYKEY, ByVal fAscending As Long)
+List1.AddItem "Entry: IFolderView2_SetGroupBy"
+End Sub
+Private Sub IFolderView2_GetGroupBy(pkey As PROPERTYKEY, pfAscending As Long)
+List1.AddItem "Entry: IFolderView2_GetGroupBy"
+End Sub
+Private Sub IFolderView2_SetViewProperty(ByVal pidl As LongPtr, propkey As PROPERTYKEY, propvar As Variant) Implements tbShellLibImpl.IFolderView2.SetViewProperty
+List1.AddItem "Entry: IFolderView2_SetViewProperty"
+End Sub
+
+Private Sub IFolderView2_GetViewProperty(ByVal pidl As LongPtr, propkey As PROPERTYKEY, ppropvar As Variant)
+List1.AddItem "Entry: IFolderView2_GetViewProperty"
+End Sub
+Private Sub IFolderView2_SetTileViewProperties(ByVal pidl As LongPtr, ByVal pszPropList As LongPtr)
+List1.AddItem "Entry: IFolderView2_SetTileViewProperties"
+End Sub
+Private Sub IFolderView2_SetExtendedTileViewProperties(ByVal pidl As LongPtr, ByVal pszPropList As LongPtr)
+List1.AddItem "Entry: IFolderView2_SetExtendedTileViewProperties"
+End Sub
+Private Sub IFolderView2_SetText(ByVal iType As FVTEXTTYPE, ByVal pwszText As LongPtr)
+List1.AddItem "Entry: IFolderView2_SetText"
+End Sub
+Private Sub IFolderView2_SetCurrentFolderFlags(ByVal dwMask As FOLDERFLAGS, ByVal dwFlags As FOLDERFLAGS)
+List1.AddItem "Entry: IFolderView2_SetCurrentFolderFlags"
+End Sub
+Private Sub IFolderView2_GetCurrentFolderFlags(pdwFlags As FOLDERFLAGS)
+List1.AddItem "Entry: IFolderView2_GetCurrentFolderFlags"
+End Sub
+Private Sub IFolderView2_GetSortColumnCount(pcColumns As Long)
+List1.AddItem "Entry: IFolderView2_GetSortColumnCount"
+pcColumns = 2
+End Sub
+Private Sub IFolderView2_SetSortColumns(ByVal rgSortColumns As LongPtr, ByVal cColumns As Long)
+List1.AddItem "Entry: IFolderView2_SetSortColumns"
+End Sub
+Private Sub IFolderView2_GetSortColumns(ByVal rgSortColumns As LongPtr, ByVal cColumns As Long)
+List1.AddItem "Entry: IFolderView2_GetSortColumns " & rgSortColumns
+Dim aCol() As SORTCOLUMN
+Dim nCol As Long
+ReDim aCol(1)
+aCol(0).direction = SORT_ASCENDING
+aCol(0).propkey = PKEY_Size
+aCol(1).direction = SORT_ASCENDING
+aCol(1).propkey = PKEY_ItemTypeText
+If (cColumns > 2) Or (cColumns < 1) Then
+    nCol = 2
+Else
+    nCol = cColumns
+End If
+CopyMemory ByVal rgSortColumns, ByVal VarPtr(aCol(0)), LenB(aCol(0)) * nCol
+List1.AddItem "IFolderView2_GetSortColumns sent " & nCol & " columns."
+End Sub
+Private Sub IFolderView2_GetItem(ByVal iItem As Long, riid As UUID, ppv As LongPtr)
+List1.AddItem "Entry: IFolderView2_GetItem"
+End Sub
+Private Sub IFolderView2_GetVisibleItem(ByVal iStart As Long, ByVal fPrevious As Long, piItem As Long)
+List1.AddItem "Entry: IFolderView2_GetVisibleItem"
+End Sub
+Private Sub IFolderView2_GetSelectedItem(ByVal iStart As Long, piItem As Long)
+List1.AddItem "Entry: IFolderView2_GetSelectedItem"
+End Sub
+Private Sub IFolderView2_GetSelection(ByVal fNoneImpliesFolder As Long, ppsia As IShellItemArray)
+List1.AddItem "Entry: IFolderView2_GetSelection"
+SHCreateItemFromParsingName StrPtr(mFile), Nothing, IID_IShellItem, mISI
+If (mISI Is Nothing) = False Then
+    SHCreateShellItemArrayFromShellItem mISI, IID_IShellItemArray, ppsia
+End If
+End Sub
+Private Sub IFolderView2_GetSelectionState(ByVal pidl As LongPtr, pdlFlags As SVSI_Flags)
+List1.AddItem "Entry: IFolderView2_GetSelectionState"
+End Sub
+Private Sub IFolderView2_InvokeVerbOnSelection(ByVal pszVerb As LongPtr)
+List1.AddItem "Entry: IFolderView2_InvokeVerbOnSelection"
+End Sub
+Private Sub IFolderView2_SetViewModeAndIconSize(ByVal uViewMode As FOLDERVIEWMODE, ByVal iImageSize As Long)
+List1.AddItem "Entry: IFolderView2_SetViewModeAndIconSize"
+End Sub
+Private Sub IFolderView2_GetViewModeAndIconSize(puViewMode As FOLDERVIEWMODE, piImageSize As Long)
+List1.AddItem "Entry: IFolderView2_GetViewModeAndIconSize"
+puViewMode = FVM_DETAILS: piImageSize = 48
+End Sub
+Private Sub IFolderView2_SetGroupSubsetCount(ByVal cVisibleRows As Long)
+List1.AddItem "Entry: IFolderView2_SetGroupSubsetCount"
+End Sub
+Private Sub IFolderView2_GetGroupSubsetCount(pcVisibleRows As Long)
+List1.AddItem "Entry: IFolderView2_GetGroupSubsetCount"
+End Sub
+Private Sub IFolderView2_SetRedraw(ByVal fRedrawOn As Long)
+List1.AddItem "Entry: IFolderView2_SetRedraw"
+End Sub
+Private Sub IFolderView2_IsMoveInSameFolder()
+List1.AddItem "Entry: IFolderView2_IsMoveInSameFolder"
+End Sub
+Private Sub IFolderView2_DoRename()
+List1.AddItem "Entry: IFolderView2_DoRename"
+End Sub
+
+
+Private Property Get IShellFolderViewDual_Application() As Object
+List1.AddItem "Entry: IShellFolderViewDual_Application"
+End Property
+
+Private Property Get IShellFolderViewDual_FocusedItem() As FolderItem
+List1.AddItem "Entry: IShellFolderViewDual_FocusedItem"
+End Property
+
+Private Property Get IShellFolderViewDual_Folder() As Folder
+List1.AddItem "Entry: IShellFolderViewDual_Folder"
+End Property
+
+Private Property Get IShellFolderViewDual_Parent() As Object
+List1.AddItem "Entry: IShellFolderViewDual_Parent"
+End Property
+
+Private Function IShellFolderViewDual_PopupItemMenu(ByVal pfi As FolderItem, Optional ByVal vx As Variant, Optional ByVal vy As Variant) As String
+List1.AddItem "Entry: IShellFolderViewDual_PopupItemMenu"
+End Function
+
+Private Property Get IShellFolderViewDual_Script() As Object
+List1.AddItem "Entry: IShellFolderViewDual_Script"
+End Property
+
+Private Function IShellFolderViewDual_SelectedItems() As FolderItems
+List1.AddItem "Entry: IShellFolderViewDual_SelectedItems"
+End Function
+
+Private Sub IShellFolderViewDual_SelectItem(ByRef pvfi As Variant, ByVal dwFlags As Long)
+List1.AddItem "Entry: IShellFolderViewDual_SelectItem"
+On Error GoTo fail
+Dim vt As Integer
+CopyMemory ByVal VarPtr(vt), ByVal VarPtr(pvfi), 2&
+List1.AddItem "IShellFolderViewDual_SelectItem->vt=" & vt
+
+Dim pidlItem As LongPtr
+Dim sa1 As SAFEARRAY1D
+Dim pSA As Long
+
+CopyMemory ByVal VarPtr(pSA), ByVal (VarPtr(pvfi) + 8&), LenB(pidlItem) 'Offset 8 is where the data begins. Here, a pointer to the SAFEARRAY
+CopyMemory ByVal VarPtr(sa1), ByVal pSA, LenB(sa1) 'We now have the full SAFEARRAY struct...
+pidlItem = sa1.pvData '...and pvData is our pidl.
+
+If pidlItem Then
+    Dim sPath As String
+    Dim hr As Long
+    sPath = String$(MAX_PATH, 0&)
+    hr = SHGetPathFromIDListW(pidlItem, StrPtr(sPath))
+    If InStr(sPath, vbNullChar) > 1 Then
+        sPath = Left$(sPath, InStr(sPath, vbNullChar) - 1)
+        List1.AddItem "ISFVD_SelectItem->" & sPath & ",Flags=" & dbg_svsiflagstr(dwFlags)
+    Else
+        List1.AddItem "ISFVD_SelectItem->pidl to path failed."
+    End If
+Else
+    List1.AddItem "ISFVD_SelectItem->Failed to get pidl"
+End If
+
+Exit Sub
+fail:
+List1.AddItem "ISFVD_SelectItem->" & Err.Description
+End Sub
+
+Private Property Get IShellFolderViewDual_ViewOptions() As Long
+List1.AddItem "Entry: IShellFolderViewDual_ViewOptions"
+End Property
+'IWebBrowser methods
+Private Sub IWebBrowserApp_GoBack()
+List1.AddItem "Entry: IWebBrowserApp_GoBack"
+End Sub
+
+Private Sub IWebBrowserApp_GoForward()
+List1.AddItem "Entry: IWebBrowserApp_GoForward"
+End Sub
+
+Private Sub IWebBrowserApp_GoHome()
+List1.AddItem "Entry: IWebBrowserApp_GoHome"
+End Sub
+
+Private Sub IWebBrowserApp_GoSearch()
+List1.AddItem "Entry: IWebBrowserApp_GoSearch"
+End Sub
+
+Private Sub IWebBrowserApp_Navigate(ByVal url As String, Optional Flags As Variant, Optional TargetFrameName As Variant, Optional PostData As Variant, Optional Headers As Variant)
+List1.AddItem "Entry: IWebBrowserApp_Navigate"
+End Sub
+
+Private Sub IWebBrowserApp_Refresh()
+List1.AddItem "Entry: IWebBrowserApp_Refresh"
+End Sub
+
+Private Sub IWebBrowserApp_Refresh2(Optional Level As Variant)
+List1.AddItem "Entry: IWebBrowserApp_Refresh2"
+End Sub
+
+Private Sub IWebBrowserApp_Stop()
+List1.AddItem "Entry: IWebBrowserApp_Stop"
+End Sub
+
+Private Property Get IWebBrowserApp_Application() As Object
+List1.AddItem "Entry: IWebBrowserApp_Application"
+End Property
+
+Private Property Get IWebBrowserApp_Parent() As Object
+List1.AddItem "Entry: IWebBrowserApp_Parent"
+End Property
+
+Private Property Get IWebBrowserApp_Container() As Object
+List1.AddItem "Entry: IWebBrowserApp_Container"
+End Property
+
+Private Property Get IWebBrowserApp_Document() As Object
+List1.AddItem "Entry: IWebBrowserApp_Document"
+Set IWebBrowserApp_Document = Me
+End Property
+
+Private Property Get IWebBrowserApp_TopLevelContainer() As Integer
+List1.AddItem "Entry: IWebBrowserApp_TopLevelContainer"
+End Property
+
+Private Property Get IWebBrowserApp_Type() As String
+List1.AddItem "Entry: IWebBrowserApp_Type"
+End Property
+
+Private Property Get IWebBrowserApp_Left() As Long
+List1.AddItem "Entry: Get IWebBrowserApp_Left"
+End Property
+Private Property Let IWebBrowserApp_Left(ByVal left As Long)
+List1.AddItem "Entry: Let IWebBrowserApp_Left"
+End Property
+
+Private Property Get IWebBrowserApp_Top() As Long
+List1.AddItem "Entry: Get IWebBrowserApp_Top"
+End Property
+Private Property Let IWebBrowserApp_Top(ByVal Top As Long)
+List1.AddItem "Entry: Let IWebBrowserApp_Top"
+End Property
+
+Private Property Get IWebBrowserApp_Width() As Long
+List1.AddItem "Entry: Get IWebBrowserApp_Width"
+End Property
+Private Property Let IWebBrowserApp_Width(ByVal Width As Long)
+List1.AddItem "Entry: Let IWebBrowserApp_Width"
+End Property
+
+Private Property Get IWebBrowserApp_Height() As Long
+List1.AddItem "Entry: Get IWebBrowserApp_Height"
+End Property
+Private Property Let IWebBrowserApp_Height(ByVal Height As Long)
+List1.AddItem "Entry: Let IWebBrowserApp_Height"
+End Property
+
+Private Property Get IWebBrowserApp_LocationName() As String
+List1.AddItem "Entry: IWebBrowserApp_LocationName"
+End Property
+
+Private Property Get IWebBrowserApp_LocationURL() As String
+List1.AddItem "Entry: IWebBrowserApp_Busy"
+End Property
+
+Private Property Get IWebBrowserApp_Busy() As Integer
+List1.AddItem "Entry: "
+End Property
+
+'BEGIN IWebBrowserApp METHODS
+Private Sub IWebBrowserApp_Quit()
+List1.AddItem "Entry: IWebBrowserApp_Quit"
+End Sub
+
+Private Sub IWebBrowserApp_ClientToWindow(pcx As Long, pcy As Long)
+List1.AddItem "Entry: IWebBrowserApp_ClientToWindow"
+End Sub
+
+Private Sub IWebBrowserApp_PutProperty(ByVal Property As String, ByVal vtValue As Variant)
+List1.AddItem "Entry: IWebBrowserApp_PutProperty"
+End Sub
+Private Function IWebBrowserApp_GetProperty(ByVal Property As String) As Variant
+List1.AddItem "Entry: IWebBrowserApp_GetProperty"
+End Function
+
+Private Property Get IWebBrowserApp_Name() As String
+List1.AddItem "Entry: IWebBrowserApp_Name"
+End Property
+
+Private Property Get IWebBrowserApp_HWND() As LongPtr
+List1.AddItem "Entry: IWebBrowserApp_HWND"
+End Property
+
+Private Property Get IWebBrowserApp_FullName() As String
+List1.AddItem "Entry: IWebBrowserApp_FullName"
+End Property
+
+Private Property Get IWebBrowserApp_Path() As String
+List1.AddItem "Entry: IWebBrowserApp_Path"
+End Property
+
+Private Property Get IWebBrowserApp_Visible() As Integer
+List1.AddItem "Entry: Get IWebBrowserApp_Visible"
+End Property
+Private Property Let IWebBrowserApp_Visible(ByVal Value As Integer)
+List1.AddItem "Entry: Let IWebBrowserApp_Visible"
+End Property
+
+Private Property Get IWebBrowserApp_StatusBar() As Integer
+List1.AddItem "Entry: Get IWebBrowserApp_StatusBar"
+End Property
+Private Property Let IWebBrowserApp_StatusBar(ByVal Value As Integer)
+List1.AddItem "Entry: Let IWebBrowserApp_StatusBar"
+End Property
+
+Private Property Get IWebBrowserApp_StatusText() As String
+List1.AddItem "Entry: Get IWebBrowserApp_StatusText"
+End Property
+Private Property Let IWebBrowserApp_StatusText(ByVal Value As String)
+List1.AddItem "Entry: Let IWebBrowserApp_StatusText"
+End Property
+
+Private Property Get IWebBrowserApp_Toolbar() As Long
+List1.AddItem "Entry: GET IWebBrowserApp_Toolbar"
+End Property
+Private Property Let IWebBrowserApp_Toolbar(ByVal Value As Long)
+List1.AddItem "Entry: LET IWebBrowserApp_Toolbar"
+End Property
+
+Private Property Get IWebBrowserApp_MenuBar() As Integer
+List1.AddItem "Entry: IWebBrowserApp_MenuBar"
+End Property
+Private Property Let IWebBrowserApp_MenuBar(ByVal Value As Integer)
+List1.AddItem "Entry: IWebBrowserApp_MenuBar"
+End Property
+
+Private Property Get IWebBrowserApp_Fullscreen() As Integer
+List1.AddItem "Entry: IWebBrowserApp_Fullscreen"
+End Property
+Private Property Let IWebBrowserApp_Fullscreen(ByVal bFullScreen As Integer)
+List1.AddItem "Entry: IWebBrowserApp_Fullscreen"
+End Property
+
+Private Sub UserControl_Resize() Handles UserControl.Resize
+    List1.Width = UserControl.Width - (List1.Left * 2)
+    List1.Height = UserControl.Height - (List1.Top * 2)
+End Sub
+
+
+
+
+
+
+
+
+
+End Class
