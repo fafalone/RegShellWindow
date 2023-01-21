@@ -57,7 +57,7 @@ Dim pidlItem As LongPtr
 Dim sa1 As SAFEARRAY1D
 Dim pSA As Long
 
-CopyMemory ByVal VarPtr(pSA), ByVal (VarPtr(pvfi) + 8&), 4& 'Offset 8 is where the data begins. Here, a pointer to the SAFEARRAY
+CopyMemory ByVal VarPtr(pSA), ByVal (VarPtr(pvfi) + 8&), LenB(pidlItem) 'Offset 8 is where the data begins. Here, a pointer to the SAFEARRAY
 CopyMemory ByVal VarPtr(sa1), ByVal pSA, LenB(sa1) 'We now have the full SAFEARRAY struct...
 pidlItem = sa1.pvData '...and pvData is our pidl.
 ```
