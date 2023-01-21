@@ -1,4 +1,4 @@
-# RegShellWindow - Shell Window Registration
+# RegShellWindow v2 - Shell Window Registration
 
 Register your app as displaying a path for SHOpenFolderAndSelectItems etc.
 
