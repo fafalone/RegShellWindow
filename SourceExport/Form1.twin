@@ -13,7 +13,14 @@ Private Sub cmdRegister_Click()
 If (pSW Is Nothing) Then
     Set pSW = New ShellWindows
     Set pDisp = ucSW1.Object
-    pSW.RegisterPending CLng(App.ThreadID), Text1.Text, VarPtr(vre), SWC_BROWSER, lCookiePending
+    Dim pItem As IShellItem
+    Dim pidl As IPersistIDList
+    SHCreateItemFromParsingName StrPtr(Text1.Text), Nothing, IID_IShellItem, pItem
+    If pItem Is Nothing Then Exit Sub
+    Set pidl = pItem
+    Dim vp As Variant
+    vp = pidl
+    pSW.RegisterPending CLng(App.ThreadID), vp, VarPtr(vre), SWC_BROWSER, lCookiePending
     Debug.Print "lCookiePending=" & lCookiePending
 '    lCookie = lCookiePending
     pSW.Register pDisp, CLng(Form1.hWnd), SWC_BROWSER, lCookie

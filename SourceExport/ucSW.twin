@@ -18,14 +18,13 @@ Private Type SAFEARRAY1D    'Represents a safe array. (One Dimensional)
     lLbound    As Long      'The lower bound of the dimension.
 End Type
 
-Implements tbShellLibImpl.IServiceProvider
+Implements tbShellLib.IServiceProvider
 Implements tbShellLib.IShellFolderViewDual
 Implements tbShellLib.IWebBrowserApp
-Implements tbShellLibImpl.IShellBrowser
+Implements tbShellLib.IShellBrowser
 Implements tbShellLib.IOleWindow
-Implements tbShellLibImpl.IShellView
-Implements tbShellLibImpl.IFolderView
-Implements tbShellLibImpl.IFolderView2
+Implements tbShellLib.IShellView
+Implements tbShellLib.IFolderView2
 
 Private Function dbg_GUIDToString(tg As UUID, Optional bBrack As Boolean = True) As String
 'StringFromGUID2 never works, even "working" code from vbaccelerator AND MSDN
@@ -97,7 +96,7 @@ ElseIf IsEqualGUID(riid, IID_IFolderView) Then
 ElseIf IsEqualGUID(riid, IID_IFolderView2) Then
    List1.AddItem "ISP QueryService IFolderView2"
    Set pUnk = Me
-   pUnk.QueryInterface IID_IFolderView, ppvObject
+   pUnk.QueryInterface IID_IFolderView2, ppvObject
 ElseIf IsEqualGUID(riid, IID_IOleWindow) Then
     List1.AddItem "ISP QueryService IOleWindow"
    Set pUnk = Me
@@ -121,23 +120,23 @@ End If
 Set pUnk = Nothing
 End Sub
 
-Private Function IOleWindow_GetWindow() As LongPtr
+Private Function IOleWindow_GetWindow() As LongPtr Implements IOleWindow.GetWindow, IShellBrowser.GetWindow, IShellView.GetWindow
 List1.AddItem "Entry: IOleWindow_GetWindow"
 IOleWindow_GetWindow = UserControl.ContainerHwnd
 End Function
-Private Sub IOleWindow_ContextSensitiveHelp(ByVal fEnterMode As Long)
+Private Sub IOleWindow_ContextSensitiveHelp(ByVal fEnterMode As Long) Implements IOleWindow.ContextSensitiveHelp, IShellBrowser.ContextSensitiveHelp, IShellView.ContextSensitiveHelp
 List1.AddItem "Entry: IOleWindow_ContextSensitiveHelp"
 End Sub
 
 'IShellView
 'First, IOleWindow methods:
-Private Function IShellView_GetWindow() As LongPtr
-List1.AddItem "Entry: IShellView_GetWindow"
-IShellView_GetWindow = Form1.hWnd
-End Function
-Private Sub IShellView_ContextSensitiveHelp(ByVal fEnterMode As Long)
-List1.AddItem "Entry: IShellView_ContextSensitiveHelp"
-End Sub
+' Private Function IShellView_GetWindow() As LongPtr Implements tbshelllib.IShellView.GetWindow
+' List1.AddItem "Entry: IShellView_GetWindow"
+' IShellView_GetWindow = Form1.hWnd
+' End Function
+' Private Sub IShellView_ContextSensitiveHelp(ByVal fEnterMode As Long)
+' List1.AddItem "Entry: IShellView_ContextSensitiveHelp"
+' End Sub
 'IShellView methods
 Private Sub IShellView_TranslateAccelerator(lpmsg As MSG)
 List1.AddItem "Entry: IShellView_TranslateAccelerator"
@@ -151,7 +150,7 @@ End Sub
 Private Sub IShellView_Refresh()
 List1.AddItem "Entry: IShellView_Refresh"
 End Sub
-Private Sub IShellView_CreateViewWindow(ByVal lpPrevView As tbShellLibImpl.IShellView, lpfs As FOLDERSETTINGS, ByVal psb As tbShellLibImpl.IShellBrowser, prcView As RECT, phwnd As LongPtr) Implements tbShellLibImpl.IShellView.CreateViewWindow
+Private Sub IShellView_CreateViewWindow(ByVal lpPrevView As tbShellLib.IShellView, lpfs As FOLDERSETTINGS, ByVal psb As tbShellLib.IShellBrowser, prcView As RECT, phwnd As LongPtr) Implements tbShellLib.IShellView.CreateViewWindow
 List1.AddItem "Entry: IShellView_CreateViewWindow"
 End Sub
 Private Sub IShellView_DestroyViewWindow()
@@ -187,19 +186,19 @@ End Sub
 Private Function IShellView_GetItemObject(ByVal uItem As Long, riid As UUID) As LongPtr
 List1.AddItem "Entry: IShellView_GetItemObject"
 End Function
-Private Sub IShellView_TranslateAcceleratorSB(lpMsg As MSG) Implements tbshelllibimpl.IShellView.TranslateAcceleratorSB
+Private Sub IShellView_TranslateAcceleratorSB(lpMsg As MSG) Implements tbshelllib.IShellView.TranslateAcceleratorSB
 List1.AddItem "Entry: IShellView_TranslateAcceleratorSB"
 End Sub
 
 'IShellBrowser
 'IOleWindow Methods
-Private Function IShellBrowser_GetWindow() As LongPtr
-List1.AddItem "Entry: IShellBrowser_GetWindow"
-IShellBrowser_GetWindow = Form1.hWnd
-End Function
-Private Sub IShellBrowser_ContextSensitiveHelp(ByVal fEnterMode As Long)
-List1.AddItem "Entry: IShellBrowser_ContextSensitiveHelp"
-End Sub
+' Private Function IShellBrowser_GetWindow() As LongPtr
+' List1.AddItem "Entry: IShellBrowser_GetWindow"
+' IShellBrowser_GetWindow = Form1.hWnd
+' End Function
+' Private Sub IShellBrowser_ContextSensitiveHelp(ByVal fEnterMode As Long)
+' List1.AddItem "Entry: IShellBrowser_ContextSensitiveHelp"
+' End Sub
 'IShellBrowser Methods
 Private Sub IShellBrowser_InsertMenusSB(ByVal hmenuShared As Long, ByVal lpMenuWidths As Long)
 List1.AddItem "Entry: IShellBrowser_InsertMenusSB"
@@ -210,7 +209,7 @@ End Sub
 Private Sub IShellBrowser_RemoveMenusSB(ByVal hmenuShared As Long)
 List1.AddItem "Entry: IShellBrowser_RemoveMenusSB"
 End Sub
-Private Sub IShellBrowser_SetStatusTextSB(ByVal lpszStatusText As String) Implements tbShellLibImpl.IShellBrowser.SetStatusTextSB
+Private Sub IShellBrowser_SetStatusTextSB(ByVal lpszStatusText As String) Implements tbShellLib.IShellBrowser.SetStatusTextSB
 List1.AddItem "Entry: IShellBrowser_SetStatusTextSB"
 End Sub
 
@@ -223,35 +222,35 @@ End Sub
 Private Sub IShellBrowser_BrowseObject(ByVal pidl As LongPtr, ByVal wFlags As BO_Flags)
 List1.AddItem "Entry: IShellBrowser_BrowseObject"
 End Sub
-Private Sub IShellBrowser_GetViewStateStream(ByVal grfMode As Long, ppStrm As IStream) Implements tbShellLibImpl.IShellBrowser.GetViewStateStream
+Private Sub IShellBrowser_GetViewStateStream(ByVal grfMode As Long, ppStrm As IStream) Implements tbShellLib.IShellBrowser.GetViewStateStream
 List1.AddItem "Entry: IShellBrowser_GetViewStateStream"
 End Sub
-Private Sub IShellBrowser_GetControlWindow(ByVal id As GCW_IDs, lpHwnd As LongPtr) Implements tbShellLibImpl.IShellBrowser.GetControlWindow
+Private Sub IShellBrowser_GetControlWindow(ByVal id As GCW_IDs, lpHwnd As LongPtr) Implements tbShellLib.IShellBrowser.GetControlWindow
 List1.AddItem "Entry: IShellBrowser_GetControlWindow"
 End Sub
 
-Private Sub IShellBrowser_SendControlMsg(ByVal id As GCW_IDs, ByVal uMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, pret As LongPtr) Implements tbShellLibImpl.IShellBrowser.SendControlMsg
+Private Sub IShellBrowser_SendControlMsg(ByVal id As GCW_IDs, ByVal uMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, pret As LongPtr) Implements tbShellLib.IShellBrowser.SendControlMsg
 List1.AddItem "Entry: IShellBrowser_SendControlMsg"
 End Sub
 
-Private Sub IShellBrowser_InsertMenuSB(ByVal hMenuShared As LongPtr, lpMenuWidth As OLEMENUGROUPWIDTHS) Implements tbShellLibImpl.IShellBrowser.InsertMenuSB
+Private Sub IShellBrowser_InsertMenuSB(ByVal hMenuShared As LongPtr, lpMenuWidth As OLEMENUGROUPWIDTHS) Implements tbShellLib.IShellBrowser.InsertMenuSB
 List1.AddItem "Entry: IShellBrowser_InsertMenuSB"
 End Sub
 
-Private Sub IShellBrowser_OnViewWindowActive(ByVal ppshv As IShellView) Implements tbShellLibImpl.IShellBrowser.OnViewWindowActive
+Private Sub IShellBrowser_OnViewWindowActive(ByVal ppshv As IShellView) Implements tbShellLib.IShellBrowser.OnViewWindowActive
 List1.AddItem "Entry: IShellBrowser_OnViewWindowActive"
 End Sub
 
-Private Sub IShellBrowser_QueryActiveShellView(ppshv As IShellView) Implements tbShellLibImpl.IShellBrowser.QueryActiveShellView
+Private Sub IShellBrowser_QueryActiveShellView(ppshv As IShellView) Implements tbShellLib.IShellBrowser.QueryActiveShellView
 List1.AddItem "Entry: IShellBrowser_QueryActiveShellView"
 Set ppshv = Me
 End Sub
 
-Private Sub IShellBrowser_RemoveWindowSB(ByVal hMenuShared As LongPtr) Implements tbShellLibImpl.IShellBrowser.RemoveWindowSB
+Private Sub IShellBrowser_RemoveWindowSB(ByVal hMenuShared As LongPtr) Implements tbShellLib.IShellBrowser.RemoveWindowSB
 List1.AddItem "Entry: IShellBrowser_RemoveWindowSB"
 End Sub
 
-Private Sub IShellBrowser_SetToolbarItems(ByVal lpButtons As LongPtr, ByVal nButtons As Long, ByVal uFlags As STI_Flags) Implements tbShellLibImpl.IShellBrowser.SetToolbarItems
+Private Sub IShellBrowser_SetToolbarItems(ByVal lpButtons As LongPtr, ByVal nButtons As Long, ByVal uFlags As STI_Flags) Implements tbShellLib.IShellBrowser.SetToolbarItems
 List1.AddItem "Entry: IShellBrowser_SetToolbarItems"
 End Sub
 
@@ -368,7 +367,7 @@ End Sub
 Private Sub IFolderView2_GetGroupBy(pkey As PROPERTYKEY, pfAscending As Long)
 List1.AddItem "Entry: IFolderView2_GetGroupBy"
 End Sub
-Private Sub IFolderView2_SetViewProperty(ByVal pidl As LongPtr, propkey As PROPERTYKEY, propvar As Variant) Implements tbShellLibImpl.IFolderView2.SetViewProperty
+Private Sub IFolderView2_SetViewProperty(ByVal pidl As LongPtr, propkey As PROPERTYKEY, propvar As Variant) Implements tbShellLib.IFolderView2.SetViewProperty
 List1.AddItem "Entry: IFolderView2_SetViewProperty"
 End Sub
 
@@ -394,11 +393,11 @@ Private Sub IFolderView2_GetSortColumnCount(pcColumns As Long)
 List1.AddItem "Entry: IFolderView2_GetSortColumnCount"
 pcColumns = 2
 End Sub
-Private Sub IFolderView2_SetSortColumns(ByVal rgSortColumns As LongPtr, ByVal cColumns As Long)
+Private Sub IFolderView2_SetSortColumns(rgSortColumns As SORTCOLUMN, ByVal cColumns As Long)
 List1.AddItem "Entry: IFolderView2_SetSortColumns"
 End Sub
-Private Sub IFolderView2_GetSortColumns(ByVal rgSortColumns As LongPtr, ByVal cColumns As Long)
-List1.AddItem "Entry: IFolderView2_GetSortColumns " & rgSortColumns
+Private Sub IFolderView2_GetSortColumns(rgSortColumns As SORTCOLUMN, ByVal cColumns As Long)
+List1.AddItem "Entry: IFolderView2_GetSortColumns " & cColumns
 Dim aCol() As SORTCOLUMN
 Dim nCol As Long
 ReDim aCol(1)
@@ -411,7 +410,7 @@ If (cColumns > 2) Or (cColumns < 1) Then
 Else
     nCol = cColumns
 End If
-CopyMemory ByVal rgSortColumns, ByVal VarPtr(aCol(0)), LenB(aCol(0)) * nCol
+CopyMemory ByVal VarPtr(rgSortColumns), ByVal VarPtr(aCol(0)), LenB(aCol(0)) * nCol
 List1.AddItem "IFolderView2_GetSortColumns sent " & nCol & " columns."
 End Sub
 Private Sub IFolderView2_GetItem(ByVal iItem As Long, riid As UUID, ppv As LongPtr)
