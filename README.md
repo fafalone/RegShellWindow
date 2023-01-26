@@ -1,4 +1,4 @@
-# RegShellWindow v2 - Shell Window Registration
+# RegShellWindow v2.1 - Shell Window Registration
 
 Register your app as displaying a path for SHOpenFolderAndSelectItems etc.
 
@@ -11,6 +11,10 @@ People who've made Explorer replacements or other apps that display a window hav
 Note that for it to start your app if it's not running with the path in question registered, it will have to be the default that opens when you pass a folder to ShellExecuteEx (i.e. registered as an Explorer replacement on the system).
 
 After Windows XP the API changed. I've completed this demo for Windows 7-10, which uses the SelectItem in IShellView. Windows XP uses IShellFolderViewDual instead.
+
+### Update
+
+v2.1 fixes a bug in tbShellLib where an entry is missing from IFolderView, breaking programs that query more detailed info.
 
 ### Requirements
 [twinBASIC Beta 236 or newer](https://github.com/twinbasic/twinbasic/releases)
