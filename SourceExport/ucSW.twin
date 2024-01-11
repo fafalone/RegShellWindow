@@ -6,7 +6,7 @@ Class ucSW
 Private mPath As String
 Private mFile As String
 
-Private mISI As tbShellLib.IShellItem
+Private mISI As IShellItem
 
 Private Type SAFEARRAY1D    'Represents a safe array. (One Dimensional)
     cDims      As Integer   'The count of dimensions.
@@ -18,13 +18,13 @@ Private Type SAFEARRAY1D    'Represents a safe array. (One Dimensional)
     lLbound    As Long      'The lower bound of the dimension.
 End Type
 
-Implements tbShellLib.IServiceProvider
-Implements tbShellLib.IShellFolderViewDual
-Implements tbShellLib.IWebBrowserApp
-Implements tbShellLib.IShellBrowser
-Implements tbShellLib.IOleWindow
-Implements tbShellLib.IShellView
-Implements tbShellLib.IFolderView2
+Implements IServiceProvider
+Implements IShellFolderViewDual
+Implements IWebBrowserApp
+Implements IShellBrowser
+Implements IOleWindow
+Implements IShellView
+Implements IFolderView2
 
 Private Function dbg_GUIDToString(tg As UUID, Optional bBrack As Boolean = True) As String
 'StringFromGUID2 never works, even "working" code from vbaccelerator AND MSDN
@@ -130,7 +130,7 @@ End Sub
 
 'IShellView
 'First, IOleWindow methods:
-' Private Function IShellView_GetWindow() As LongPtr Implements tbshelllib.IShellView.GetWindow
+' Private Function IShellView_GetWindow() As LongPtr Implements IShellView.GetWindow
 ' List1.AddItem "Entry: IShellView_GetWindow"
 ' IShellView_GetWindow = Form1.hWnd
 ' End Function
@@ -150,7 +150,7 @@ End Sub
 Private Sub IShellView_Refresh()
 List1.AddItem "Entry: IShellView_Refresh"
 End Sub
-Private Sub IShellView_CreateViewWindow(ByVal lpPrevView As tbShellLib.IShellView, lpfs As FOLDERSETTINGS, ByVal psb As tbShellLib.IShellBrowser, prcView As RECT, phwnd As LongPtr) Implements tbShellLib.IShellView.CreateViewWindow
+Private Sub IShellView_CreateViewWindow(ByVal lpPrevView As IShellView, lpfs As FOLDERSETTINGS, ByVal psb As IShellBrowser, prcView As RECT, phwnd As LongPtr) Implements IShellView.CreateViewWindow
 List1.AddItem "Entry: IShellView_CreateViewWindow"
 End Sub
 Private Sub IShellView_DestroyViewWindow()
@@ -186,9 +186,9 @@ End Sub
 Private Function IShellView_GetItemObject(ByVal uItem As Long, riid As UUID) As LongPtr
 List1.AddItem "Entry: IShellView_GetItemObject"
 End Function
-Private Sub IShellView_TranslateAcceleratorSB(lpMsg As MSG) Implements tbshelllib.IShellView.TranslateAcceleratorSB
-List1.AddItem "Entry: IShellView_TranslateAcceleratorSB"
-End Sub
+' Private Sub IShellView_TranslateAccelerator(lpMsg As MSG) Implements IShellView.TranslateAccelerator
+' List1.AddItem "Entry: IShellView_TranslateAcceleratorSB"
+' End Sub
 
 'IShellBrowser
 'IOleWindow Methods
@@ -209,7 +209,7 @@ End Sub
 Private Sub IShellBrowser_RemoveMenusSB(ByVal hmenuShared As Long)
 List1.AddItem "Entry: IShellBrowser_RemoveMenusSB"
 End Sub
-Private Sub IShellBrowser_SetStatusTextSB(ByVal lpszStatusText As String) Implements tbShellLib.IShellBrowser.SetStatusTextSB
+Private Sub IShellBrowser_SetStatusTextSB(ByVal lpszStatusText As String) Implements IShellBrowser.SetStatusTextSB
 List1.AddItem "Entry: IShellBrowser_SetStatusTextSB"
 End Sub
 
@@ -222,35 +222,35 @@ End Sub
 Private Sub IShellBrowser_BrowseObject(ByVal pidl As LongPtr, ByVal wFlags As BO_Flags)
 List1.AddItem "Entry: IShellBrowser_BrowseObject"
 End Sub
-Private Sub IShellBrowser_GetViewStateStream(ByVal grfMode As Long, ppStrm As IStream) Implements tbShellLib.IShellBrowser.GetViewStateStream
+Private Sub IShellBrowser_GetViewStateStream(ByVal grfMode As Long, ppStrm As IStream) Implements IShellBrowser.GetViewStateStream
 List1.AddItem "Entry: IShellBrowser_GetViewStateStream"
 End Sub
-Private Sub IShellBrowser_GetControlWindow(ByVal id As GCW_IDs, lpHwnd As LongPtr) Implements tbShellLib.IShellBrowser.GetControlWindow
+Private Sub IShellBrowser_GetControlWindow(ByVal id As GCW_IDs, lpHwnd As LongPtr) Implements IShellBrowser.GetControlWindow
 List1.AddItem "Entry: IShellBrowser_GetControlWindow"
 End Sub
 
-Private Sub IShellBrowser_SendControlMsg(ByVal id As GCW_IDs, ByVal uMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, pret As LongPtr) Implements tbShellLib.IShellBrowser.SendControlMsg
+Private Sub IShellBrowser_SendControlMsg(ByVal id As GCW_IDs, ByVal uMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, pret As LongPtr) Implements IShellBrowser.SendControlMsg
 List1.AddItem "Entry: IShellBrowser_SendControlMsg"
 End Sub
 
-Private Sub IShellBrowser_InsertMenuSB(ByVal hMenuShared As LongPtr, lpMenuWidth As OLEMENUGROUPWIDTHS) Implements tbShellLib.IShellBrowser.InsertMenuSB
+Private Sub IShellBrowser_InsertMenuSB(ByVal hMenuShared As LongPtr, lpMenuWidth As OLEMENUGROUPWIDTHS) Implements IShellBrowser.InsertMenuSB
 List1.AddItem "Entry: IShellBrowser_InsertMenuSB"
 End Sub
 
-Private Sub IShellBrowser_OnViewWindowActive(ByVal ppshv As IShellView) Implements tbShellLib.IShellBrowser.OnViewWindowActive
+Private Sub IShellBrowser_OnViewWindowActive(ByVal ppshv As IShellView) Implements IShellBrowser.OnViewWindowActive
 List1.AddItem "Entry: IShellBrowser_OnViewWindowActive"
 End Sub
 
-Private Sub IShellBrowser_QueryActiveShellView(ppshv As IShellView) Implements tbShellLib.IShellBrowser.QueryActiveShellView
+Private Sub IShellBrowser_QueryActiveShellView(ppshv As IShellView) Implements IShellBrowser.QueryActiveShellView
 List1.AddItem "Entry: IShellBrowser_QueryActiveShellView"
 Set ppshv = Me
 End Sub
 
-Private Sub IShellBrowser_RemoveWindowSB(ByVal hMenuShared As LongPtr) Implements tbShellLib.IShellBrowser.RemoveWindowSB
+Private Sub IShellBrowser_RemoveWindowSB(ByVal hMenuShared As LongPtr) Implements IShellBrowser.RemoveWindowSB
 List1.AddItem "Entry: IShellBrowser_RemoveWindowSB"
 End Sub
 
-Private Sub IShellBrowser_SetToolbarItems(ByVal lpButtons As LongPtr, ByVal nButtons As Long, ByVal uFlags As STI_Flags) Implements tbShellLib.IShellBrowser.SetToolbarItems
+Private Sub IShellBrowser_SetToolbarItems(ByVal lpButtons As LongPtr, ByVal nButtons As Long, ByVal uFlags As STI_Flags) Implements IShellBrowser.SetToolbarItems
 List1.AddItem "Entry: IShellBrowser_SetToolbarItems"
 End Sub
 
@@ -367,7 +367,7 @@ End Sub
 Private Sub IFolderView2_GetGroupBy(pkey As PROPERTYKEY, pfAscending As Long)
 List1.AddItem "Entry: IFolderView2_GetGroupBy"
 End Sub
-Private Sub IFolderView2_SetViewProperty(ByVal pidl As LongPtr, propkey As PROPERTYKEY, propvar As Variant) Implements tbShellLib.IFolderView2.SetViewProperty
+Private Sub IFolderView2_SetViewProperty(ByVal pidl As LongPtr, propkey As PROPERTYKEY, propvar As Variant) Implements IFolderView2.SetViewProperty
 List1.AddItem "Entry: IFolderView2_SetViewProperty"
 End Sub
 
@@ -575,7 +575,7 @@ List1.AddItem "Entry: IWebBrowserApp_Document"
 Set IWebBrowserApp_Document = Me
 End Property
 
-Private Property Get IWebBrowserApp_TopLevelContainer() As Integer
+Private Property Get IWebBrowserApp_TopLevelContainer() As Boolean
 List1.AddItem "Entry: IWebBrowserApp_TopLevelContainer"
 End Property
 
@@ -619,7 +619,7 @@ Private Property Get IWebBrowserApp_LocationURL() As String
 List1.AddItem "Entry: IWebBrowserApp_Busy"
 End Property
 
-Private Property Get IWebBrowserApp_Busy() As Integer
+Private Property Get IWebBrowserApp_Busy() As Boolean
 List1.AddItem "Entry: "
 End Property
 
@@ -655,17 +655,17 @@ Private Property Get IWebBrowserApp_Path() As String
 List1.AddItem "Entry: IWebBrowserApp_Path"
 End Property
 
-Private Property Get IWebBrowserApp_Visible() As Integer
+Private Property Get IWebBrowserApp_Visible() As Boolean
 List1.AddItem "Entry: Get IWebBrowserApp_Visible"
 End Property
-Private Property Let IWebBrowserApp_Visible(ByVal Value As Integer)
+Private Property Let IWebBrowserApp_Visible(ByVal Value As Boolean)
 List1.AddItem "Entry: Let IWebBrowserApp_Visible"
 End Property
 
-Private Property Get IWebBrowserApp_StatusBar() As Integer
+Private Property Get IWebBrowserApp_StatusBar() As Boolean
 List1.AddItem "Entry: Get IWebBrowserApp_StatusBar"
 End Property
-Private Property Let IWebBrowserApp_StatusBar(ByVal Value As Integer)
+Private Property Let IWebBrowserApp_StatusBar(ByVal Value As Boolean)
 List1.AddItem "Entry: Let IWebBrowserApp_StatusBar"
 End Property
 
@@ -683,17 +683,17 @@ Private Property Let IWebBrowserApp_Toolbar(ByVal Value As Long)
 List1.AddItem "Entry: LET IWebBrowserApp_Toolbar"
 End Property
 
-Private Property Get IWebBrowserApp_MenuBar() As Integer
+Private Property Get IWebBrowserApp_MenuBar() As Boolean
 List1.AddItem "Entry: IWebBrowserApp_MenuBar"
 End Property
-Private Property Let IWebBrowserApp_MenuBar(ByVal Value As Integer)
+Private Property Let IWebBrowserApp_MenuBar(ByVal Value As Boolean)
 List1.AddItem "Entry: IWebBrowserApp_MenuBar"
 End Property
 
-Private Property Get IWebBrowserApp_Fullscreen() As Integer
+Private Property Get IWebBrowserApp_Fullscreen() As Boolean
 List1.AddItem "Entry: IWebBrowserApp_Fullscreen"
 End Property
-Private Property Let IWebBrowserApp_Fullscreen(ByVal bFullScreen As Integer)
+Private Property Let IWebBrowserApp_Fullscreen(ByVal bFullScreen As Boolean)
 List1.AddItem "Entry: IWebBrowserApp_Fullscreen"
 End Property
 
