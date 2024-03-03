@@ -14,6 +14,8 @@ After Windows XP the API changed. I've completed this demo for Windows 7-10, whi
 
 ### Update
 
+Update (03 Mar 2024): .twinproj has been updated to use a more recent version of WinDevLib (formerly tbShellLib) due to errors in the package tB did not raise at the time this project was released.
+
 v2.1 fixes a bug in tbShellLib where an entry is missing from IFolderView, breaking programs that query more detailed info.
 
 ### Requirements
